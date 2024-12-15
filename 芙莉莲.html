@@ -33,6 +33,7 @@
     <script type="module">
       import * as THREE from "https://unpkg.com/three@0.155.0/build/three.module.js";
 
+     
       const threeRef = { value: document.getElementById("threeContainer") };
 
       // 初始化场景、摄像机和渲染器
@@ -85,9 +86,10 @@
           Math.random() * 5.8 - 2.9,
           0
         );
+        //改变流速
         sandParticle.userData = {
           stayTime: 0,
-          velocity: new THREE.Vector3(0, -0.035 - Math.random() * 0.01, 0),
+          velocity: new THREE.Vector3(0, -0.05 - Math.random() * 0.01, 0),
         };
         sandParticles.push(sandParticle);
         scene.add(sandParticle);

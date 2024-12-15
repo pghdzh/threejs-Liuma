@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>雪花背景</title>
+    <style>
+      /* 设置画布的大小为整个视口 */
+      .item {
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 创建一个容器用于放置three.js的渲染结果 -->
+    <div id="threeContainer" class="item"></div>
+
+    <script type="module">
+      import * as THREE from "https://unpkg.com/three@0.155.0/build/three.module.js";
+
+      // 获取用于渲染的DOM容器
+      const threeRef = { value: document.getElementById("threeContainer") };
+
+      // 获取容器的宽度和高度
+      const domWidth = threeRef.value.clientWidth;
+      const domHeight = threeRef.value.clientHeight;
+
+      // 创建WebGL渲染器并设置像素比，适配不同设备的屏幕密度
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(domWidth, domHeight);
+      // 将渲染器的canvas元素添加到页面中
+      threeRef.value.appendChild(renderer.domElement);
+
+      // 创建透视相机
+      const camera = new THREE.PerspectiveCamera(75, 2, 1, 2000);
+      camera.position.z = 1000;  // 设置相机的位置
+
+      // 创建场景
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xd3e0ff); // 设置淡蓝色的背景
+
+      // 创建一个缓冲几何体来存放雪花粒子的坐标
+      const geometry = new THREE.BufferGeometry();
+      const vertices = []; // 存放雪花的位置坐标
+
+      // 加载雪花纹理
+      const textureLoader = new THREE.TextureLoader();
+
+      // 定义颜色空间转换函数，设置纹理的颜色空间为 sRGB
+      const assignSRGB = (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace; // 设置纹理的颜色空间为 sRGB
+      };
+
+      // 加载不同的雪花纹理
+      const sprite1 = textureLoader.load("threeImg/snowflake1.png", assignSRGB);
+      const sprite2 = textureLoader.load("threeImg/snowflake2.png", assignSRGB);
+      const sprite3 = textureLoader.load("threeImg/snowflake3.png", assignSRGB);
+      const sprite4 = textureLoader.load("threeImg/snowflake4.png", assignSRGB);
+      const sprite5 = textureLoader.load("threeImg/snowflake5.png", assignSRGB);
+
+      // 随机生成1000个雪花的坐标（x, y, z），模拟雪花在三维空间中的位置
+      for (let i = 0; i < 1000; i++) {
+        const x = Math.random() * 2000 - 1000;  // 随机x坐标
+        const y = Math.random() * 2000 - 1000;  // 随机y坐标
+        const z = Math.random() * 2000 - 1000;  // 随机z坐标
+
+        vertices.push(x, y, z);  // 将生成的坐标加入到vertices数组
+      }
+
+      // 将生成的雪花坐标设置为几何体的顶点属性
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+
+      // 定义不同类型雪花的纹理和大小参数
+      let parameters = [
+        [sprite2, 20],  // sprite2: 雪花纹理，20: 大小
+        [sprite3, 15],  // sprite3: 雪花纹理，15: 大小
+        [sprite1, 10],  // sprite1: 雪花纹理，10: 大小
+        [sprite5, 8],   // sprite5: 雪花纹理，8: 大小
+        [sprite4, 5],   // sprite4: 雪花纹理，5: 大小
+      ];
+
+      let materials = [];  // 用于存放不同雪花的材质
+      for (let i = 0; i < parameters.length; i++) {
+        const sprite = parameters[i][0];  // 纹理
+        const size = parameters[i][1];    // 大小
+
+        // 创建点材质，用于渲染雪花，设置为透明并启用加法混合
+        materials[i] = new THREE.PointsMaterial({
+          size,
+          map: sprite,  // 使用雪花纹理
+          blending: THREE.AdditiveBlending, // 使用加法混合模式
+          depthTest: false, // 不进行深度测试，确保透明效果正常显示
+          transparent: true, // 启用透明度
+        });
+
+        // 创建粒子系统
+        const particles = new THREE.Points(geometry, materials[i]);
+
+        // 给粒子系统设置随机的旋转角度
+        particles.rotation.x = Math.random() * 6;
+        particles.rotation.y = Math.random() * 6;
+        particles.rotation.z = Math.random() * 6;
+
+        // 将粒子系统添加到场景中
+        scene.add(particles);
+      }
+
+      // 定义鼠标移动事件，用于控制相机位置
+      const onPointerMove = (event) => {
+        if (event.isPrimary === false) return;  // 只响应主鼠标指针（避免多指触控）
+
+        mouseX = event.clientX - domWidth / 2;  // 计算鼠标相对于屏幕中心的水平偏移
+        mouseY = event.clientY - domHeight / 2; // 计算鼠标相对于屏幕中心的垂直偏移
+      };
+
+      // 禁用触摸事件的默认操作，防止在移动设备上发生意外的拖动
+      threeRef.value.style.touchAction = "none";
+      // 监听鼠标移动事件
+      threeRef.value.addEventListener("pointermove", onPointerMove);
+
+      let mouseX = 0;  // 鼠标的x坐标
+      let mouseY = 0;  // 鼠标的y坐标
+
+      // 渲染函数
+      const render = () => {
+        const time = Date.now() * 0.00005;  // 获取时间戳，用于动画效果
+
+        // 根据鼠标位置更新相机的平移
+        camera.position.x += (mouseX - camera.position.x) * 0.05;
+        camera.position.y += (-mouseY - camera.position.y) * 0.05;
+
+        // 使相机始终注视场景中心
+        camera.lookAt(scene.position);
+
+        // 为每个雪花粒子系统添加旋转动画
+        for (let i = 0; i < scene.children.length; i++) {
+          const object = scene.children[i];
+          if (object instanceof THREE.Points) {
+            object.rotation.y = time * (i < 4 ? i + 1 : -(i + 1));  // 根据时间和索引设置旋转
+          }
+        }
+
+        // 渲染场景
+        renderer.render(scene, camera);
+        // 继续请求下一帧
+        requestAnimationFrame(render);
+      };
+
+      // 启动渲染循环
+      requestAnimationFrame(render);
+    </script>
+  </body>
+</html>
